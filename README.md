@@ -2,6 +2,10 @@
 
 **An Arduino Temperature Monitor with Logging**
 
+
+![arduino_temp_monitor](/arduino_temp_monitor.jpg)
+
+
 Requirements 
     
     - 1 Arduino
@@ -11,4 +15,4 @@ Requirements
     - 1 4.7k pull-up resistor
 
 
-![arduino_temp_monitor](/arduino_temp_monitor.jpg)
+
