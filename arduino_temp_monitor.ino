@@ -12,6 +12,7 @@
 Time now;
 int count = 1;
 char filename[13];
+#define INTERVAL 5
 DS3231  rtc(SDA, SCL);
 LiquidCrystal_I2C lcd(0x3F, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
@@ -44,9 +45,9 @@ void setup()
     Serial.println("Initializing DS3231 real time clock");
     rtc.begin();
     // Uncomment the following three lines to set date and time.
-    //rtc.setDOW(SUNDAY);     // Set the day of the week to THURSDAY.
-    //rtc.setTime(23, 49, 30);     // Set time HH MM SS (24hr format).
-    //rtc.setDate(15, 10, 2017);   // Set date DD MM YYYY.
+    rtc.setDOW(MONDAY);     // Set the day of the week to THURSDAY.
+    rtc.setTime(23, 44, 30);     // Set time HH MM SS (24hr format).
+    rtc.setDate(16, 10, 2017);   // Set date DD MM YYYY.
     now = rtc.getTime();
     
     //String(String(now.year) + String(now.mon) + String(now.date) + ".csv").toCharArray(filename, 13);
@@ -132,30 +133,29 @@ void loop()
     
     String time_now = rtc.getTimeStr();
     String midnight = "00:00:00";
-  
     if (time_now == midnight) {
         createFilename();
         count = 1;                 
         File datafile = SD.open(filename, FILE_WRITE);
-        } else {
-        File datafile = SD.open(filename, FILE_WRITE);
-        if (datafile) {
-            datafile.print(count);
-            datafile.print(",");
-            datafile.print(rtc.getDateStr());
-            datafile.print(",");
-            datafile.print(rtc.getTimeStr());
-            datafile.print(",");
-            datafile.print(sensors.getTempFByIndex(0));
-            datafile.print(",");
-            datafile.print(sensors.getTempFByIndex(1));
-            datafile.print(",");
-            datafile.println(sensors.getTempFByIndex(2));
-            datafile.close();
-            count++;
-        } else {
-            Serial.println("SD Card Fail!");
+        } else if (count % INTERVAL == 0) {
+            File datafile = SD.open(filename, FILE_WRITE);
+            if (datafile) {
+                datafile.print(count);
+                datafile.print(",");
+                datafile.print(rtc.getDateStr());
+                datafile.print(",");
+                datafile.print(rtc.getTimeStr());
+                datafile.print(",");
+                datafile.print(sensors.getTempFByIndex(0));
+                datafile.print(",");
+                datafile.print(sensors.getTempFByIndex(1));
+                datafile.print(",");
+                datafile.println(sensors.getTempFByIndex(2));
+                datafile.close();
+           } else {
+           Serial.println("SD Card Fail!");
         }
     }
-    delay(5000); // Set a five second delay.
+    count++;
+    delay(1000);
 }
