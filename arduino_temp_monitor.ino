@@ -11,8 +11,8 @@
 
 Time now;
 int count = 1;
+int line_number = 1;
 char filename[13];
-#define INTERVAL 5
 DS3231  rtc(SDA, SCL);
 LiquidCrystal_I2C lcd(0x3F, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
@@ -27,6 +27,7 @@ DeviceAddress Probe03 = { 0x28, 0xFF, 0xF9, 0xAC, 0x8C, 0x16, 0x03, 0xDB }; // T
 
 void setup()
 {
+    Serial.end();
     Serial.begin(9600);
 
     // i2C LCD //////////////////////////////////////////
@@ -34,9 +35,14 @@ void setup()
     lcd.begin(20,4);
     
      // SD Card //////////////////////////////////////////
-    Serial.println("Initializing SD card");
+    Serial.println("Initializing SD card... ");
     if (!SD.begin(4)) {
         Serial.println("SD CARD NOT FOUND!");
+        lcd.clear();
+        lcd.setCursor(1,0); 
+        lcd.print("ERROR:");
+        lcd.setCursor(1,2);
+        lcd.print("SD Card not found.");
         return;
     }
     Serial.println("SD Card initialized.");
@@ -45,9 +51,9 @@ void setup()
     Serial.println("Initializing DS3231 real time clock");
     rtc.begin();
     // Uncomment the following three lines to set date and time.
-    rtc.setDOW(MONDAY);     // Set the day of the week to THURSDAY.
-    rtc.setTime(23, 44, 30);     // Set time HH MM SS (24hr format).
-    rtc.setDate(16, 10, 2017);   // Set date DD MM YYYY.
+    //rtc.setDOW(THURSDAY);     // Set the day of the week to THURSDAY.
+    //rtc.setTime(3, 21, 30);     // Set time HH MM SS (24hr format).
+    //rtc.setDate(19, 10, 2017);   // Set date DD MM YYYY.
     now = rtc.getTime();
     
     //String(String(now.year) + String(now.mon) + String(now.date) + ".csv").toCharArray(filename, 13);
@@ -113,21 +119,50 @@ void createFilename(){
     if(m < 10) { month_var += '0'; }
     month_var += m;
     String(String(now.year) + String(month_var) + String(date_var) + ".csv").toCharArray(filename, 13);
+    File datafile = SD.open(filename, FILE_WRITE);
+            if (datafile) {
+                datafile.print("Number");
+                datafile.print(",");
+                datafile.print("Date");
+                datafile.print(",");
+                datafile.print("Time");
+                datafile.print(",");
+                datafile.print("Sensor 1");
+                datafile.print(",");
+                datafile.print("Sensor 2");
+                datafile.print(",");
+                datafile.println("Sensor 3");
+                datafile.close();
+            }
 }
 
 void loop()
 {    
+    now = rtc.getTime();
     sensors.requestTemperatures();
-    lcd.clear();
-    lcd.setCursor(0,0); 
-    lcd.print("ARDUINO TEMP MONITOR");
-    lcd.setCursor(0,1);
+    //lcd.clear();  // Caused screen flicker.
+    lcd.setCursor(1,0); 
+    lcd.print(now.year);
+    if (now.mon < 10) { lcd.print("0"); }
+    lcd.print(now.mon);
+    if (now.date < 10) { lcd.print("0"); }
+    lcd.print(now.date);
+    lcd.print("  ");
+    if (now.hour < 10) { lcd.print("0"); }
+    lcd.print(now.hour);
+    lcd.print(":");
+    if (now.min < 10) { lcd.print("0"); }
+    lcd.print(now.min);
+    lcd.print(":");
+    if (now.sec < 10) { lcd.print("0"); }
+    lcd.print(now.sec);
+    lcd.setCursor(1,1);
     lcd.print("Sensor1: ");
     displayTemperature(Probe01);
-    lcd.setCursor(0,2);
+    lcd.setCursor(1,2);
     lcd.print("Sensor2: ");
     displayTemperature(Probe02);
-    lcd.setCursor(0,3);
+    lcd.setCursor(1,3);
     lcd.print("Sensor3: ");
     displayTemperature(Probe03);
     
@@ -135,12 +170,14 @@ void loop()
     String midnight = "00:00:00";
     if (time_now == midnight) {
         createFilename();
-        count = 1;                 
+        count = 1;  
+        line_number = 1;        
         File datafile = SD.open(filename, FILE_WRITE);
-        } else if (count % INTERVAL == 0) {
+        // Write to SD card every 10 minutes.
+        } else if (now.min % 10 == 0 && now.sec == 0) {
             File datafile = SD.open(filename, FILE_WRITE);
             if (datafile) {
-                datafile.print(count);
+                datafile.print(line_number);
                 datafile.print(",");
                 datafile.print(rtc.getDateStr());
                 datafile.print(",");
@@ -152,8 +189,14 @@ void loop()
                 datafile.print(",");
                 datafile.println(sensors.getTempFByIndex(2));
                 datafile.close();
+                line_number++; 
            } else {
-           Serial.println("SD Card Fail!");
+           Serial.println("SD Card Failure");
+           lcd.clear();
+           lcd.setCursor(1,0); 
+           lcd.print("ERROR:");
+           lcd.setCursor(1,2); 
+           lcd.print("SD Card Failure");
         }
     }
     count++;
